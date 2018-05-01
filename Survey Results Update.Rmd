@@ -1,0 +1,425 @@
+---
+title: "MAET Technology Survey - Results"
+author: "Joshua Rosenberg"
+date: "10/14/2017"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Just comparing pre-post survey results
+
+```{r, eval = F, echo = F}
+
+# Pre
+
+df1 <- gs_title('MAET 2013 Tech Survey (Responses) x')
+df1 <- gs_read(df1, ws = 1)
+
+df2 <- gs_title('MAET 2014 Tech Pre-Survey (Responses) x')
+df2 <- gs_read(df2, ws = 1)
+
+df3 <- gs_title('MAET 2015 Tech Pre-Survey (Responses)')
+df3 <- gs_read(df3, ws = 1)
+df3
+
+df4 <- gs_title('MAET 2016 Tech Pre-Survey (Responses)')
+df4 <- gs_read(df4, ws = 1)
+df4 <- select(df4, -54, -53, -52, -51)
+df4
+
+df5 <- gs_title('MAET 2017 Tech Pre-Survey (Responses)')
+df5 <- gs_read(df5, ws = 1)
+df5 <- select(df5, -52, -51)
+df5
+
+nrow(df1) + nrow(df2) + nrow(df3) + nrow(df4) + nrow(df5)
+
+names_df <- data_frame(names_df1 = names(df1),
+                       names_df2 = names(df2),
+                       names_df3 = names(df3),
+                       names_df4 = names(df4),
+                       names_df5 = names(df5))
+
+names_df # checking these are all named the same
+
+names(df1) <- names(df5)
+names(df2) <- names(df5)
+names(df3) <- names(df5)
+names(df4) <- names(df5)
+names(df5) <- names(df5)
+
+df_pre <- bind_rows(df1, df2, df3, df4, df5) # 74 observations from five years
+
+df_pre <- mutate(df_pre, 
+                 date = lubridate::mdy_hms(Timestamp),
+                 year = lubridate::year(date), 
+                 time = "pre")
+
+# Posts
+
+df1 <- gs_title('MAET 2013 Tech Post-survey  (Responses)')
+df1 <- gs_read(df1, ws = 1)
+df1
+
+df2 <- gs_title('MAET 2014 Tech Post-Survey  (Responses)')
+df2 <- gs_read(df2, ws = 1)
+df2
+
+df3 <- gs_title('MAET 2015 Tech Post-Survey  (Responses)')
+df3 <- gs_read(df3, ws = 1)
+df3
+
+df4 <- gs_title('MAET 2016 Tech Post-Survey (Responses)')
+df4 <- gs_read(df4, ws = 1)
+df4 <- select(df4, -54, -53, -52, -51)
+df4
+
+df5 <- gs_title('MAET 2017 Tech Post-Survey (Responses)')
+df5 <- gs_read(df5, ws = 1)
+df5 <- select(df5, -54, -53, -52, -51)
+df5
+
+sd <- gs_title('Summary Data MAET Survey')
+sd <- gs_read(sd, ws = 1)
+
+nrow(df1) + nrow(df2) + nrow(df3) + nrow(df4) + nrow(df5) # 69 post obs 
+
+names_df <- data_frame(names_df1 = names(df1),
+                       names_df2 = names(df2),
+                       names_df3 = names(df3),
+                       names_df4 = names(df4),
+                       names_df5 = names(df5))
+
+names_df # checking these are named the same
+
+names(df1) <- names(df5)
+names(df2) <- names(df5)
+names(df3) <- names(df5)
+names(df4) <- names(df5)
+names(df5) <- names(df5)
+
+df_post <- bind_rows(df1, df2, df3, df4, df5)
+df_pre <- rename(df_pre, "Most Important" = "Want to Learn More")
+
+df_post <- mutate(df_post, 
+                  date = lubridate::mdy_hms(Timestamp),
+                  year = lubridate::year(date), 
+                  time = "post")
+
+# All
+
+b <- gs_title('Summary Data MAET Survey')
+b <- gs_read(b, ws = 1)
+the_cat <- as.numeric(as.vector(unlist(b[b$Timestamp == "Type of variable", ])))
+the_cat
+
+d <- bind_rows(df_pre, df_post)
+write_csv(d, "2017-10-27-MAET-tech-survey-all-data.csv")
+write_csv(sd, "data-with-cats.csv")
+```
+
+Loading data
+
+```{r, message = F, warning = F}
+library(googlesheets)
+library(tidyverse)
+d <- read_csv("2017-10-27-MAET-tech-survey-all-data.csv")
+sd <- read_csv("2017-10-27-MAET-tech-survey-key.csv")
+```
+
+With all variables - test
+
+```{r}
+oo <- data.frame()
+
+for (i in 3:49){
+    x <- as.vector(unlist(d[, i]))
+    y <- as.vector(d$time)
+    o <- t.test(x ~ y, paired = F)
+    to <- broom::tidy(o)
+    cd <- effsize::cohen.d(x, y, paired=F)
+    to$cohen_d <- abs(cd$estimate)
+    oo <- bind_rows(oo, to)
+    oo <- as_tibble(oo)
+}
+
+oo$var <- names(d)[3:49]
+oo <- select(oo, var, pre = estimate2, post = estimate1, diff = estimate, t_statistic = statistic, p_value = p.value,  cohen_d)
+oo$p_value <- round(oo$p_value, 3)
+oo
+clipr::write_clip(oo)
+```
+
+With all variables - plot
+
+```{r}
+calc_se <- function(x) {
+    sd(x, na.rm = T) / sqrt(length(x) -1)
+}
+
+x <- d %>%
+    group_by(time) %>% 
+    summarize_at(.vars = vars(`Overall Confidence`:`Navigate a Firewall`), funs(mean, calc_se)) %>% 
+    gather(key, val, -time) %>% 
+    mutate(type = str_detect(key, "calc_se")*1,
+           type = if_else(type == 0, "mean", "se")) %>% 
+    group_by(key) %>% 
+    spread(type, val)
+
+y <- c(x$mean[-1], NA)
+
+x$mean <- y
+
+x <- filter(x, !is.na(mean))
+x <- ungroup(x)  
+x <- mutate(x, key = str_sub(key, end = -9))
+
+tm <- sd %>% 
+    filter(Timestamp == "Type of variable") %>% 
+    gather(key, val) %>% 
+    mutate(nval = as.integer(val)) %>% 
+    filter(!is.na(nval) & !is.na(val)) %>% 
+    dplyr::select(key, var_type = val) %>% 
+    mutate(var_type = ifelse(var_type == 1, "Low",
+                             ifelse(var_type == 2, "Medium", "High")),
+           var_type = forcats::fct_relevel(var_type, (c("Low", "Medium", "High"))))
+
+x %>% 
+    left_join(tm) %>% 
+    filter(!is.na(var_type)) %>% 
+    ggplot(aes(x = reorder(key, mean), y = mean, ymin = (mean-(1.96*se)), ymax = (mean + (1.96*se)), linetype = time, color = var_type)) +
+    geom_point(position = position_dodge(width = 1)) +
+    geom_errorbar(position = position_dodge(width = 1)) +
+    coord_flip() +
+    xlab(NULL) +
+    ylab("Mean Score") + 
+    scale_linetype_discrete("Survey Timepoint", labels = c("Pre-class", "Post-class")) +
+    scale_color_brewer("Alignment", type = "seq", palette = 7) +
+    theme_bw()
+# 
+# x %>%
+#     left_join(tm) %>%
+#     filter(!is.na(var_type)) %>%
+#     ggplot(aes(x = reorder(key, mean), y = mean, fill = time, ymin = (mean-(1.96*se)), ymax = (mean + (1.96*se)))) +
+#     facet_wrap(~var_type, ncol = 1, scales = "free") +
+#     geom_col(position = "dodge") +
+#     geom_errorbar(position = "dodge") +
+#     coord_flip() +
+#     xlab(NULL) +
+#     ylab("Value") +
+#     scale_fill_discrete("Survey Timepoint", labels = c("Pre-class", "Post-class")) +
+#     theme_bw() +
+#     theme(legend.position="bottom", text = element_text(size = 13)) +
+#     theme_bw()
+# 
+# x %>%
+#     left_join(tm) %>%
+#     filter(!is.na(var_type)) %>%
+#     ggplot(aes(x = reorder(key, mean), y = mean, fill = time, ymin = (mean-(1.96*se)), ymax = (mean + (1.96*se)))) +
+#     geom_col(position = "dodge") +
+#     geom_errorbar(position = "dodge") +
+#     geom_point(position = "dodge") +
+#     coord_flip() +
+#     xlab(NULL) +
+#     ylab("Value") +
+#     scale_fill_discrete("Survey Timepoint", labels = c("Pre-class", "Post-class")) +
+#     theme_bw() +
+#     theme(legend.position="bottom", text = element_text(size = 13)) +
+#     theme_bw()
+```
+
+By grouping variables
+
+Variable definitions:
+
+* Overall: represents overall confidence and overall confidence for teaching and learning
+
+* 1: represents don't do it / haven't done it over the past five years
+* 2: represents may do it / have possibly done it over the past five years
+* 3: represents definitely do it / have used it over the past five years
+
+```{r}
+x <- sd[1, ] %>% 
+    select(-Timestamp, -date, -year, -`Want to Learn More`) %>% 
+    gather(key, var_type, -time) %>% 
+    mutate(var_type = case_when(
+        var_type == "Overall" ~ "Overall",
+        var_type == 1 ~ "Low Alignment",
+        var_type == 2 ~ "Medium Alignment",
+        var_type == 3 ~ "High Alignment"
+    ))
+
+nd <- names(d)[3:49]
+
+ta <- d %>%
+    select(-Timestamp, -date, -year, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    rename(time = time.x) %>% 
+    select(-time.y) %>% 
+    filter(var_type != "Overall")
+
+m1 <- lm(val ~ var_type*time, data = ta)
+summary(m1)
+
+m1i <- aov(val ~ var_type*time, data = ta)
+summary(m1i)
+TukeyHSD(m1i)
+
+ta <- d %>%
+    select(-Timestamp, -date, -year, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    rename(time = time.x) %>% 
+    select(-time.y) %>% 
+    filter(time == "pre")
+
+r <- aov(ta$val ~ ta$var_type)
+summary(r)
+TukeyHSD(r)
+
+ta <- d %>%
+    select(-Timestamp, -date, -year, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    rename(time = time.x) %>% 
+    select(-time.y) %>% 
+    filter(time == "post")
+
+m1 <- lm(val ~ var_type*time, data = ta)
+
+r <- aov(ta$val ~ ta$var_type)
+summary(r)
+TukeyHSD(r)
+
+p <- d %>%
+    select(-Timestamp, -date, -year, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    rename(time = time.x) %>% 
+    group_by(time, var_type) %>% 
+    mutate(val= as.numeric(val)) %>% 
+    summarize(mean_val = mean(val, na.rm = T),
+              se_val = calc_se(val)) %>% 
+    ungroup() %>% 
+    mutate(var_type = forcats::fct_relevel(var_type,
+                                           c("Low Alignment", "Medium Alignment", "High Alignment", "Overall")),
+           time = forcats::fct_relevel(time, c("pre", "post"))
+    )
+
+ggplot(p, aes(x = var_type, y = mean_val, fill = time, ymin = (mean_val-(1.96*se_val)), ymax = (mean_val + (1.96*se_val)))) +
+    geom_col(position = "dodge") +
+    geom_errorbar(position = "dodge") +
+    xlab(NULL) +
+    ylab("Value") +
+    scale_fill_discrete("Survey Timepoint", labels = c("Pre-class", "Post-class")) +
+    theme_bw() +
+    geom_vline(xintercept = 3.5, linetype = "dashed") +
+    theme(text = element_text(family = "Times", size = 14)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggsave("overall-diff.png", width = 8, height = 5)
+```
+
+```{r}
+d %>% 
+    select(-Timestamp, -year, -date, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    select(time = time.x, everything(), -time.y) %>% 
+    filter(var_type == "Overall") %>% 
+    tidyttest::t_test(val, time)
+
+d %>% 
+    select(-Timestamp, -year, -date, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    select(time = time.x, everything(), -time.y) %>% 
+    filter(var_type == "Low Alignment") %>% 
+    tidyttest::t_test(val, time)
+
+d %>% 
+    select(-Timestamp, -year, -date, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    select(time = time.x, everything(), -time.y) %>% 
+    filter(var_type == "Medium Alignment") %>% 
+    tidyttest::t_test(val, time)
+
+x <- d %>% 
+    select(-Timestamp, -year, -date, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    select(time = time.x, everything(), -time.y) %>% 
+    filter(var_type == "High Alignment") %>% 
+    t_test_test()
+```
+
+```{r}
+d %>%
+    select(-Timestamp, -date, -year, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>%
+    rename(time = time.x)
+```
+
+
+```{r, t-test-fun}
+t_test_test <- function(df, dv, group) {
+    
+    dv_q <- as.character(substitute(dv))
+    group_q <- as.character(substitute(group))
+    
+    dv_enquo <- dplyr::enquo(dv)
+    group_enquo <- dplyr::enquo(group)
+    
+    the_formula <- stats::as.formula(paste(dv_q, " ~ ", group_q))
+    test_results <- stats::t.test(the_formula, data = df)
+    
+    print(paste(names(test_results$estimate[1]), " is ", round(test_results$estimate[1], 3)))
+    print(paste(names(test_results$estimate[2]), " is ", round(test_results$estimate[2], 3)))
+    
+    print(paste("Test statistic is ", round(test_results$statistic, 3)))
+    print(paste("P-value is ", round(test_results$p.value, )))
+    
+    the_ns <- dplyr::count(df, !! group_enquo)
+    the_ns <- dplyr::pull(the_ns, n)
+    
+    effect_size_results <- compute.es::tes(test_results$statistic,
+                                           n.1 = the_ns[1],
+                                           n.2 = the_ns[2],
+                                           verbose = F)
+    
+    print(paste("Effect size is ", effect_size_results$d))
+    
+    #broom::tidy(test_results)
+    out <- dplyr::data_frame(group_1_mean = round(test_results$estimate[1], 3),
+                             group_2_mean = round(test_results$estimate[2], 3),
+                             test_statistic = round(test_results$statistic, 3),
+                             p_value = round(test_results$p.value, 3),
+                             effect_size = effect_size_results$d)
+    
+    invisible(out)
+    
+}
+```
+
+```{r}
+d %>% 
+    select(-Timestamp, -year, -date, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    select(time = time.x, everything(), -time.y) 
+
+d %>% 
+    select(-Timestamp, -year, -date, -`Most Important`) %>% 
+    gather(key, val, -time) %>% 
+    left_join(x, by = "key") %>% 
+    select(time = time.x, everything(), -time.y) %>% 
+    filter(var_type == "High Alignment") %>% 
+    ```
