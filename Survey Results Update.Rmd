@@ -192,6 +192,7 @@ tm <- sd %>%
 x %>% 
     left_join(tm) %>% 
     filter(!is.na(var_type)) %>% 
+    mutate(time = forcats::fct_relevel(as.factor(time), c("pre", "post"))) %>% 
     ggplot(aes(x = reorder(key, mean), y = mean, ymin = (mean-(1.96*se)), ymax = (mean + (1.96*se)), linetype = time, color = var_type)) +
     geom_point(position = position_dodge(width = 1)) +
     geom_errorbar(position = position_dodge(width = 1)) +
@@ -199,7 +200,7 @@ x %>%
     xlab(NULL) +
     ylab("Mean Score") + 
     scale_linetype_discrete("Survey Timepoint", labels = c("Pre-class", "Post-class")) +
-    scale_color_brewer("Alignment", type = "seq", palette = 7) +
+    scale_color_brewer("Alignment", type = "qual", palette = 2) +
     theme_bw()
 # 
 # x %>%
