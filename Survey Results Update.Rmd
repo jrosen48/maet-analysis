@@ -199,10 +199,10 @@ x %>%
     coord_flip() +
     xlab(NULL) +
     ylab("Mean Score") + 
-    scale_linetype_discrete("Survey Timepoint", labels = c("Pre-class", "Post-class")) +
     scale_color_brewer("Alignment", type = "qual", palette = 2) +
-    theme_bw()
-# 
+    theme_bw() +
+    scale_linetype_manual("Survey Timepoint", labels = c("Pre-class", "Post-class"), values = c("dashed", "solid"))
+
 # x %>%
 #     left_join(tm) %>%
 #     filter(!is.na(var_type)) %>%
@@ -386,7 +386,7 @@ t_test_test <- function(df, dv, group) {
     print(paste(names(test_results$estimate[2]), " is ", round(test_results$estimate[2], 3)))
     
     print(paste("Test statistic is ", round(test_results$statistic, 3)))
-    print(paste("P-value is ", round(test_results$p.value, )))
+    print(paste("P-value is ", round(test_results$p.value, 3)))
     
     the_ns <- dplyr::count(df, !! group_enquo)
     the_ns <- dplyr::pull(the_ns, n)
@@ -422,5 +422,6 @@ d %>%
     gather(key, val, -time) %>% 
     left_join(x, by = "key") %>% 
     select(time = time.x, everything(), -time.y) %>% 
-    filter(var_type == "High Alignment") %>% 
-    ```
+    filter(var_type == "High Alignment")
+    
+```
