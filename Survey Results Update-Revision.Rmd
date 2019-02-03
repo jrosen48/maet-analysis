@@ -246,6 +246,43 @@ x %>%
 #     theme_bw()
 ```
 
+```{r}
+ddd <- d %>% select(`Syncing Email`:`Navigate a Firewall`) %>% gather(key, val) %>% left_join(tm)
+
+r1 <- ddd %>% # 26
+  filter(var_type=="Low") %>% 
+  group_by(key) %>% 
+  mutate(row_n = row_number()) %>% 
+  spread(key, val) %>% 
+  select(-var_type, -row_n)
+
+psych::alpha(as.matrix(r1)) # 0.92
+
+r2 <- ddd %>% # 12
+  filter(var_type=="Medium") %>% 
+  group_by(key) %>% 
+  mutate(row_n = row_number()) %>% 
+  spread(key, val) %>% 
+  select(-var_type, -row_n)
+
+psych::alpha(as.matrix(r2)) # 0.88
+
+r3 <- ddd %>% # 8 
+  filter(var_type=="High") %>% 
+  group_by(key) %>% 
+  mutate(row_n = row_number()) %>% 
+  spread(key, val) %>% 
+  select(-var_type, -row_n)
+
+psych::alpha(as.matrix(r3)) # 0.83
+```
+
+```{r}
+t <- read_csv("t-tests.csv")
+t <- slice(t, 1:47)
+t$adjusted_p_value <- p.adjust(t$p_value, method = "hochberg")
+```
+
 By grouping variables
 
 Variable definitions:
