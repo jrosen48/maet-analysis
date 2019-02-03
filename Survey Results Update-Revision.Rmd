@@ -61,28 +61,27 @@ df_pre <- mutate(df_pre,
                  time = "pre")
 
 # Posts
+library(readxl)
+df1 <- read_xlsx('Surveys/MAET 2013 Tech Post-survey  (Responses).xlsx')
+# df1 <- gs_read(df1, ws = 1)
+# df1
 
-df1 <- gs_title('MAET 2013 Tech Post-survey  (Responses)')
-df1 <- gs_read(df1, ws = 1)
-df1
+df2 <- read_xlsx('surveys/MAET 2014 Tech Post-Survey  (Responses)')
+#df2 <- gs_read(df2, ws = 1)
 
-df2 <- gs_title('MAET 2014 Tech Post-Survey  (Responses)')
-df2 <- gs_read(df2, ws = 1)
-df2
+df3 <- read_xlsx('surveys/MAET 2015 Tech Post-Survey  (Responses)')
+# df3 <- gs_read(df3, ws = 1)
+# df3
 
-df3 <- gs_title('MAET 2015 Tech Post-Survey  (Responses)')
-df3 <- gs_read(df3, ws = 1)
-df3
-
-df4 <- gs_title('MAET 2016 Tech Post-Survey (Responses)')
-df4 <- gs_read(df4, ws = 1)
+df4<- read_xlsx('surveys/MAET 2016 Tech Post-Survey (Responses)')
+#df4 <- gs_read(df4, ws = 1)
 df4 <- select(df4, -54, -53, -52, -51)
-df4
+#df4
 
-df5 <- gs_title('MAET 2017 Tech Post-Survey (Responses)')
-df5 <- gs_read(df5, ws = 1)
+df5 <- read_xlsx('surveys/MAET 2017 Tech Post-Survey (Responses)')
+#df5 <- gs_read(df5, ws = 1)
 df5 <- select(df5, -54, -53, -52, -51)
-df5
+#df5
 
 sd <- gs_title('Summary Data MAET Survey')
 sd <- gs_read(sd, ws = 1)
