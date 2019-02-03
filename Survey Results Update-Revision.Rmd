@@ -14,28 +14,29 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Just comparing pre-post survey results
 
 ```{r, eval = F, echo = F}
-library(googlesheets)
-# Pre
+# library(googlesheets)
+library(readxl)
+library(tidyverse)
 
-df1 <- gs_title('MAET 2013 Tech Survey (Responses)')
-df1 <- gs_read(df1, ws = 1)
+df1 <- read_xlsx('Surveys/MAET 2013 Tech Survey (Responses).xlsx')
+#df1 <- gs_read(df1, ws = 1)
 
-df2 <- gs_title('MAET 2014 Tech Pre-Survey (Responses) x')
-df2 <- gs_read(df2, ws = 1)
+df2 <- read_xlsx('Surveys/MAET 2014 Tech Pre-Survey (Responses) x.xlsx')
+#df2 <- gs_read(df2, ws = 1)
 
-df3 <- gs_title('MAET 2015 Tech Pre-Survey (Responses)')
-df3 <- gs_read(df3, ws = 1)
-df3
+df3 <- read_xlsx('Surveys/MAET 2015 Tech Pre-Survey (Responses).xlsx')
+#df3 <- gs_read(df3, ws = 1)
+#df3
 
-df4 <- gs_title('MAET 2016 Tech Pre-Survey (Responses)')
-df4 <- gs_read(df4, ws = 1)
+df4 <- read_xlsx('Surveys/MAET 2016 Tech Pre-Survey (Responses).xlsx')
+#df4 <- gs_read(df4, ws = 1)
 df4 <- select(df4, -54, -53, -52, -51)
-df4
+#df4
 
-df5 <- gs_title('MAET 2017 Tech Pre-Survey (Responses)')
-df5 <- gs_read(df5, ws = 1)
+df5 <- read_xlsx('Surveys/MAET 2017 Tech Pre-Survey (Responses).xlsx')
+#df5 <- gs_read(df5, ws = 1)
 df5 <- select(df5, -52, -51)
-df5
+#df5
 
 nrow(df1) + nrow(df2) + nrow(df3) + nrow(df4) + nrow(df5)
 
@@ -61,30 +62,30 @@ df_pre <- mutate(df_pre,
                  time = "pre")
 
 # Posts
-library(readxl)
+
 df1 <- read_xlsx('Surveys/MAET 2013 Tech Post-survey  (Responses).xlsx')
 # df1 <- gs_read(df1, ws = 1)
 # df1
 
-df2 <- read_xlsx('surveys/MAET 2014 Tech Post-Survey  (Responses)')
+df2 <- read_xlsx('surveys/MAET 2014 Tech Post-Survey  (Responses).xlsx')
 #df2 <- gs_read(df2, ws = 1)
 
-df3 <- read_xlsx('surveys/MAET 2015 Tech Post-Survey  (Responses)')
+df3 <- read_xlsx('surveys/MAET 2015 Tech Post-Survey  (Responses).xlsx')
 # df3 <- gs_read(df3, ws = 1)
 # df3
 
-df4<- read_xlsx('surveys/MAET 2016 Tech Post-Survey (Responses)')
+df4<- read_xlsx('surveys/MAET 2016 Tech Post-Survey (Responses).xlsx')
 #df4 <- gs_read(df4, ws = 1)
 df4 <- select(df4, -54, -53, -52, -51)
 #df4
 
-df5 <- read_xlsx('surveys/MAET 2017 Tech Post-Survey (Responses)')
+df5 <- read_xlsx('surveys/MAET 2017 Tech Post-Survey (Responses).xlsx')
 #df5 <- gs_read(df5, ws = 1)
 df5 <- select(df5, -54, -53, -52, -51)
 #df5
 
-sd <- gs_title('Summary Data MAET Survey')
-sd <- gs_read(sd, ws = 1)
+# sd <- read_xlsx('surveys/Summary Data MAET Survey.xlsx')
+#sd <- gs_read(sd, ws = 1)
 
 nrow(df1) + nrow(df2) + nrow(df3) + nrow(df4) + nrow(df5) # 69 post obs 
 
@@ -112,23 +113,36 @@ df_post <- mutate(df_post,
 
 # All
 
-b <- gs_title('Summary Data MAET Survey')
-b <- gs_read(b, ws = 1)
-the_cat <- as.numeric(as.vector(unlist(b[b$Timestamp == "Type of variable", ])))
-the_cat
+# b <- gs_title('Summary Data MAET Survey')
+# b <- gs_read(b, ws = 1)
+# the_cat <- as.numeric(as.vector(unlist(b[b$Timestamp == "Type of variable", ])))
+# the_cat
 
 d <- bind_rows(df_pre, df_post)
-write_csv(d, "2017-10-27-MAET-tech-survey-all-data.csv")
-write_csv(sd, "data-with-cats.csv")
+#write_csv(d, "2017-10-27-MAET-tech-survey-all-data.csv")
+#write_csv(sd, "data-with-cats.csv")
 ```
 
 Loading data
 
-```{r, message = F, warning = F}
+```{r, message = F, warning = F, eval = FALSE}
 library(googlesheets)
 library(tidyverse)
-d <- read_csv("2017-10-27-MAET-tech-survey-all-data.csv")
-sd <- read_csv("2017-10-27-MAET-tech-survey-key.csv")
+d <- read_csv('maet-survey.csv', col_types = cols(
+  .default = col_double(),
+  Timestamp = col_character(),
+  `Want to Learn More` = col_character(),
+  date = col_datetime(format = ""),
+  time = col_character()
+))
+
+d <- slice(d, 2:nrow(d))
+
+dd <- read_csv('maet-survey.csv')
+sd <- slice(dd, 1:1)
+#key <- slice(d, 1:1)
+#d <- read_csv("2017-10-27-MAET-tech-survey-all-data.csv")
+#sd <- read_csv("2017-10-27-MAET-tech-survey-key.csv")
 ```
 
 With all variables - test
@@ -150,7 +164,6 @@ for (i in 3:49){
 oo$var <- names(d)[3:49]
 oo <- select(oo, var, pre = estimate2, post = estimate1, diff = estimate, t_statistic = statistic, p_value = p.value,  cohen_d)
 oo$p_value <- round(oo$p_value, 3)
-oo
 clipr::write_clip(oo)
 ```
 
